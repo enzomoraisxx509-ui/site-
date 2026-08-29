@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Futebol Camp</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:Arial,sans-serif;color:#fff;
+  background:#071007 url("futebol_camp_fundo.png") center top/cover fixed no-repeat;
+  min-height:100vh;
+}
+body:before{content:"";position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:-1}
+.container{max-width:1000px;margin:auto;padding:25px 16px 45px}
+h1{text-align:center;font-size:clamp(38px,8vw,70px);margin:5px 0 25px;font-weight:900;letter-spacing:2px}
+h1 span{color:#7CFF00}
+.card{
+  background:rgba(5,10,5,.86);border:1px solid #6cff00;
+  border-radius:18px;padding:22px;margin:16px 0;
+  box-shadow:0 0 25px rgba(80,255,0,.12)
+}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+h2{text-align:center;margin-top:0}
+.result{text-align:center;font-size:clamp(32px,7vw,62px);font-weight:900;margin:20px 0;min-height:70px}
+button{
+  border:0;border-radius:12px;padding:14px 24px;margin:5px;
+  font-size:18px;font-weight:800;cursor:pointer;color:white
+}
+.green{background:#18b900}.yellow{background:#e4a900}.red{background:#d71919}.blue{background:#1976d2}
+button:disabled{opacity:.45;cursor:not-allowed}
+.center{text-align:center}
+#timer{font-size:clamp(70px,15vw,145px);font-weight:900;text-align:center;letter-spacing:3px}
+#status{text-align:center;font-size:22px;min-height:28px}
+.settings{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+input{
+  width:90%;max-width:420px;padding:13px;border-radius:10px;border:0;
+  font-size:18px;text-align:center
+}
+.small{opacity:.8;text-align:center}
+.score{font-size:32px;text-align:center;font-weight:900}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>FUTEBOL <span>CAMP</span></h1>
+
+  <div class="grid">
+    <section class="card">
+      <h2>⚽ Quem começa?</h2>
+      <p class="small">50% de chance para DENTRO e 50% para FORA.</p>
+      <div class="center">
+        <button class="green" onclick="sortearComeco()">🎲 CLIQUE</button>
+      </div>
+      <div id="resultado" class="result">—</div>
+      <div class="center">
+        <button class="blue" id="btnJogo" onclick="iniciarJogo()" disabled>▶ INICIAR JOGO</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>🏆 Placar</h2>
+      <div class="score"><span id="casa">00</span> × <span id="fora">00</span></div>
+      <div class="center">
+        <button class="green" onclick="alterarPlacar('casa',1)">Casa +1</button>
+        <button class="red" onclick="alterarPlacar('casa',-1)">Casa -1</button>
+        <br>
+        <button class="green" onclick="alterarPlacar('fora',1)">Fora +1</button>
+        <button class="red" onclick="alterarPlacar('fora',-1)">Fora -1</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>⏱️ Cronômetro da partida</h2>
+    <div id="timer">00:00</div>
+    <div id="status">Faça o sorteio para escolher quem começa.</div>
+    <div class="center">
+      <button class="green" id="start" onclick="continuarJogo()" disabled>▶ INICIAR</button>
+      <button class="yellow" onclick="pausarJogo()">⏸ PAUSAR</button>
+      <button class="red" onclick="zerarJogo()">↻ ZERAR</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>⚙️ Configurações</h2>
+    <div class="settings">
+      <label>Nome do time que começa<br>
+        <input id="nomeTime" placeholder="Ex.: Time Verde">
+      </label>
+    </div>
+    <p class="small">As variáveis principais também ficam no JavaScript abaixo.</p>
+  </section>
+</div>
+
+<script>
+// ===============================
+// VARIÁVEIS PRINCIPAIS (FORA)
+// ===============================
+const PRIMEIRO_TEMPO = 45 * 60;  // 45 minutos
+const INTERVALO = 10 * 60;       // 10 minutos
+const SEGUNDO_TEMPO = 45 * 60;   // 45 minutos
+const JOGO_TOTAL = PRIMEIRO_TEMPO + SEGUNDO_TEMPO;
+
+let tempo = 0;
+let rodando = false;
+let timer = null;
+let intervaloAutomatico = null;
+let sorteioFeito = false;
+let noIntervalo = false;
+
+// ===============================
+// FUNÇÕES
+// ===============================
+function sortearComeco(){
+  const resultado = Math.random() < 0.5 ? "DENTRO!" : "FORA!";
+  document.getElementById("resultado").textContent = resultado;
+  document.getElementById("btnJogo").disabled = false;
+  document.getElementById("start").disabled = false;
+  sorteioFeito = true;
+  document.getElementById("status").textContent =
+    "Começa " + resultado + " Agora você pode iniciar a partida.";
+}
+
+function iniciarJogo(){
+  if(!sorteioFeito) return;
+  iniciarCronometro();
+}
+
+function continuarJogo(){
+  if(!sorteioFeito || tempo >= JOGO_TOTAL) return;
+  iniciarCronometro();
+}
+
+function iniciarCronometro(){
+  if(rodando || noIntervalo || tempo >= JOGO_TOTAL) return;
+  rodando = true;
+  document.getElementById("status").textContent = "⚽ JOGO EM ANDAMENTO";
+
+  timer = setInterval(()=>{
+    tempo++;
+    atualizar();
+
+    if(tempo === PRIMEIRO_TEMPO){
+      clearInterval(timer);
+      timer = null;
+      rodando = false;
+      iniciarIntervalo();
+    } else if(tempo >= JOGO_TOTAL){
+      clearInterval(timer);
+      timer = null;
+      rodando = false;
+      tempo = JOGO_TOTAL;
+      atualizar();
+      document.getElementById("status").textContent = "🏁 FIM DE JOGO!";
+    }
+  },1000);
+}
+
+function iniciarIntervalo(){
+  noIntervalo = true;
+  document.getElementById("status").textContent =
+    "⏸️ INTERVALO — 10:00";
+
+  let restante = INTERVALO;
+  intervaloAutomatico = setInterval(()=>{
+    restante--;
+    const m = Math.floor(restante/60);
+    const s = restante % 60;
+    document.getElementById("timer").textContent =
+      "45:00";
+    document.getElementById("status").textContent =
+      "⏸️ INTERVALO — " + String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+
+    if(restante <= 0){
+      clearInterval(intervaloAutomatico);
+      intervaloAutomatico = null;
+      noIntervalo = false;
+      document.getElementById("status").textContent =
+        "⚽ 2º TEMPO — JOGO EM ANDAMENTO";
+      iniciarCronometro();
+    }
+  },1000);
+}
+
+function pausarJogo(){
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+    rodando = false;
+    document.getElementById("status").textContent = "⏸️ JOGO PAUSADO";
+  }
+}
+
+function zerarJogo(){
+  clearInterval(timer);
+  clearInterval(intervaloAutomatico);
+  timer = null;
+  intervaloAutomatico = null;
+  tempo = 0;
+  rodando = false;
+  noIntervalo = false;
+  sorteioFeito = false;
+  document.getElementById("resultado").textContent = "—";
+  document.getElementById("btnJogo").disabled = true;
+  document.getElementById("start").disabled = true;
+  document.getElementById("timer").textContent = "00:00";
+  document.getElementById("status").textContent =
+    "Faça o sorteio para escolher quem começa.";
+  document.getElementById("casa").textContent = "00";
+  document.getElementById("fora").textContent = "00";
+}
+
+function atualizar(){
+  const m = Math.floor(tempo/60);
+  const s = tempo % 60;
+  document.getElementById("timer").textContent =
+    String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+}
+
+function alterarPlacar(time, valor){
+  const el = document.getElementById(time);
+  let n = Math.max(0, parseInt(el.textContent) + valor);
+  el.textContent = String(n).padStart(2,"0");
+}
+</script>
+</body>
+</html>
